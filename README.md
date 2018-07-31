@@ -1,5 +1,5 @@
 # WebGL-pbr
-A simple, easy to use WebGL library, supporting .obj model loadinga and textures.
+A simple, easy to use WebGL library, supporting .obj model loading, and textures.
 
 __Note__: At the moment, only one model is supported, and you have to write you own GLSL shaders. In the future, I plan to support multiple models, with PBR materials. To use textures, you have to run from a server. If you want to test locally, opem cmd or equivalent and run python -m http.server (with python 3). Then open your browser and go to localhost:8000 (or whatever number it tells you). For this to work you html file must be called "index.html".
 
