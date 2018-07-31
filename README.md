@@ -1,6 +1,8 @@
 # WebGL-pbr
 A simple, easy to use WebGL library, supporting .obj model loading.
 
+__Note__: At the moment, only one model is supported, textures are not supported, and you have to write you own GLSL shaders. In the future, I plan to support multiple models, textures, with PBR materials.
+
 # Dependencies
 This requires [gl-matrix](https://github.com/toji/gl-matrix) and [webgl-obj-loader](https://github.com/frenchtoast747/webgl-obj-loader).
 
