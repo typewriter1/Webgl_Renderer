@@ -23,6 +23,11 @@ function Model(gl, model_id, shaderProgram){
 	OBJ.initMeshBuffers(gl, this.mesh);
 	
 	this.transform = new Transform();
+	
+	this.setTexture = function(tex){
+		this.uSamplerUniform = gl.getUniformLocation(this.shaderProgram, "uSampler");
+		this.texture = tex;
+	}
 }
 
 function Texture(gl, url){
