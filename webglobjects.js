@@ -50,6 +50,12 @@ f 8/19/6 4/20/6 2/21/6 6/22/6
 
 function Game(gl){
 	this.gl = gl;
+	this.scene = [];
+	this.camera = null;
+	
+	this.setMainCamera = function(camera){
+		this.camera = camera;
+	}
 }
 //All objects in a game are made by adding components to an entity.
 function Entity(gameObject){
@@ -97,6 +103,7 @@ function Renderer(entity){
 }
 function Camera(gameObject){
 	Entity.call(this, gameObject);
+	gameObject.setMainCamera(this);
 	this.setup = function(fov, near, far){
 		this.fov = fov;
 		this.near = near;

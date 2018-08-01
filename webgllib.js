@@ -173,12 +173,12 @@ function transformSystem(matrix, model){
 					
 	mat4.rotate(matrix,  // destination matrix
 				matrix,  // matrix to rotate
-				transform.rot[1] * Math.PI / 180,   // amount to rotate in radians
+				transform.rot[2] * Math.PI / 180,   // amount to rotate in radians
 				[0, 0, 1]);       // axis to rotate around
 }
 
 
-engine.renderFrame = function(models, camera) {
+engine.renderSystem = function(gameObject, model) {
  
 	gl.clearColor(0.3, 0.6, 0.8, 1.0);  // Clear to blue, fully opaque
 	gl.clearDepth(1.0);                 // Clear everything
@@ -189,7 +189,12 @@ engine.renderFrame = function(models, camera) {
 
 	gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 	
+	if (gameObject.camera === null){
+		throw "No main camera has been set.";
+	}
 	
+	//set the camera variable to the main camera
+	var camera = gameObject.camera;
 
 	// Create a perspective matrix, a special matrix that is
 	// used to simulate the distortion of perspective in a camera.
@@ -212,113 +217,119 @@ engine.renderFrame = function(models, camera) {
 					   aspect,
 					   zNear,
 					   zFar);
+					   
+	transformSystem(projectionMatrix, camera);
 
 	// Set the drawing position to the "identity" point, which is
 	// the center of the scene.
+
+
+	var mesh = model.components["renderer"].mesh;
+	var shaderProgram = model.components["renderer"].shaderProgram;
+	
+	var modelViewMatrix = mat4.create();
+	// Now move the drawing position a bit to where we want to
+	// start drawing the square.
+	
+	//All entities have transform components, so invoke the transform system.
+	transformSystem(modelViewMatrix, model);
+
+	OBJ.initMeshBuffers(gl, mesh);
+	// Tell WebGL how to pull out the positions from the position
+	// buffer into the vertexPosition attribute.
+	{
+		const numComponents = mesh.vertexBuffer.itemSize;
+		const type = gl.FLOAT;
+		const normalize = false;
+		const stride = 0;
+		const offset = 0;
+		gl.bindBuffer(gl.ARRAY_BUFFER, mesh.vertexBuffer);
+		gl.vertexAttribPointer(
+			shaderProgram.vertexPositionAttribute,
+			numComponents,
+			type,
+			normalize,
+			stride,
+			offset);
+		gl.enableVertexAttribArray(
+			shaderProgram.vertexPositionAttribute);
+	}
+
+	// Tell WebGL how to pull out the positions from the normal
+	// buffer into the vertexPosition attribute.
+	{
+		const numComponents = mesh.normalBuffer.itemSize;
+		const type = gl.FLOAT;
+		const normalize = false;
+		const stride = 0;
+		const offset = 0;
+		gl.bindBuffer(gl.ARRAY_BUFFER, mesh.normalBuffer);
+		gl.vertexAttribPointer(
+			shaderProgram.vertexNormalAttribute,
+			numComponents,
+			type,
+			normalize,
+			stride,
+			offset);
+		gl.enableVertexAttribArray(
+			shaderProgram.vertexNormalAttribute);
+	}
 	
 	
-	for (model of models){
-		var mesh = model.components["renderer"].mesh;
-		var shaderProgram = model.components["renderer"].shaderProgram;
-		
-		var modelViewMatrix = mat4.create();
-		// Now move the drawing position a bit to where we want to
-		// start drawing the square.
-		
-		//All entities have transform components, so invoke the transform system.
-		transformSystem(modelViewMatrix, model);
+	//Don't setup texture buffer if there isn't a texture.
+	if(!mesh.textures.length){
+		gl.disableVertexAttribArray(model.shaderProgram.textureCoordAttribute);
+	}
+	else{
+		// if the texture vertexAttribArray has been previously
+		// disabled, then it needs to be re-enabled
+		gl.enableVertexAttribArray(shaderProgram.textureCoordAttribute);
+		gl.bindBuffer(gl.ARRAY_BUFFER, mesh.textureBuffer);
+		gl.vertexAttribPointer(shaderProgram.textureCoordAttribute, mesh.textureBuffer.itemSize, gl.FLOAT, false, 0, 0);
+	}
+	
+	
 
-		OBJ.initMeshBuffers(gl, mesh);
-		// Tell WebGL how to pull out the positions from the position
-		// buffer into the vertexPosition attribute.
-		{
-			const numComponents = mesh.vertexBuffer.itemSize;
-			const type = gl.FLOAT;
-			const normalize = false;
-			const stride = 0;
-			const offset = 0;
-			gl.bindBuffer(gl.ARRAY_BUFFER, mesh.vertexBuffer);
-			gl.vertexAttribPointer(
-				shaderProgram.vertexPositionAttribute,
-				numComponents,
-				type,
-				normalize,
-				stride,
-				offset);
-			gl.enableVertexAttribArray(
-				shaderProgram.vertexPositionAttribute);
-		}
+	// Tell WebGL to use our program when drawing
 
-		// Tell WebGL how to pull out the positions from the normal
-		// buffer into the vertexPosition attribute.
-		{
-			const numComponents = mesh.normalBuffer.itemSize;
-			const type = gl.FLOAT;
-			const normalize = false;
-			const stride = 0;
-			const offset = 0;
-			gl.bindBuffer(gl.ARRAY_BUFFER, mesh.normalBuffer);
-			gl.vertexAttribPointer(
-				shaderProgram.vertexNormalAttribute,
-				numComponents,
-				type,
-				normalize,
-				stride,
-				offset);
-			gl.enableVertexAttribArray(
-				shaderProgram.vertexNormalAttribute);
-		}
-		
-		
-		//Don't setup texture buffer if there isn't a texture.
-		if(!mesh.textures.length){
-			gl.disableVertexAttribArray(model.shaderProgram.textureCoordAttribute);
-		}
-		else{
-			// if the texture vertexAttribArray has been previously
-			// disabled, then it needs to be re-enabled
-			gl.enableVertexAttribArray(shaderProgram.textureCoordAttribute);
-			gl.bindBuffer(gl.ARRAY_BUFFER, mesh.textureBuffer);
-			gl.vertexAttribPointer(shaderProgram.textureCoordAttribute, mesh.textureBuffer.itemSize, gl.FLOAT, false, 0, 0);
-		}
-		
-		
+	gl.useProgram(shaderProgram);
 
-		// Tell WebGL to use our program when drawing
+	// Set the shader uniforms
 
-		gl.useProgram(shaderProgram);
+	gl.uniformMatrix4fv(
+		gl.getUniformLocation(shaderProgram, "uProjectionMatrix"),
+		false,
+		projectionMatrix);
+	gl.uniformMatrix4fv(
+		gl.getUniformLocation(shaderProgram, "uModelViewMatrix"),
+		false,
+		modelViewMatrix);
+		  
+	// Tell WebGL we want to affect texture unit 0
+	gl.activeTexture(gl.TEXTURE0);
 
-		// Set the shader uniforms
+	// Bind the texture to texture unit 0
+	gl.bindTexture(gl.TEXTURE_2D, model.components["renderer"].texture);
 
-		gl.uniformMatrix4fv(
-			gl.getUniformLocation(shaderProgram, "uProjectionMatrix"),
-			false,
-			projectionMatrix);
-		gl.uniformMatrix4fv(
-			gl.getUniformLocation(shaderProgram, "uModelViewMatrix"),
-			false,
-			modelViewMatrix);
-			  
-		// Tell WebGL we want to affect texture unit 0
-		gl.activeTexture(gl.TEXTURE0);
-
-		// Bind the texture to texture unit 0
-		gl.bindTexture(gl.TEXTURE_2D, model.components["renderer"].texture);
-
-		// Tell the shader we bound the texture to texture unit 0
-		gl.uniform1i(model.components["renderer"].uSamplerUniform, 0);
+	// Tell the shader we bound the texture to texture unit 0
+	gl.uniform1i(model.components["renderer"].uSamplerUniform, 0);
 
 
 
-		{
-			const offset = 0;
-			const vertexCount = 36;
-			const type = gl.UNSIGNED_SHORT;
-			gl.drawElements(gl.TRIANGLES, mesh.indexBuffer.numItems, type, offset);
-		}
+	{
+		const offset = 0;
+		const vertexCount = 36;
+		const type = gl.UNSIGNED_SHORT;
+		gl.drawElements(gl.TRIANGLES, mesh.indexBuffer.numItems, type, offset);
 	}
 }
 
+//Programs should call this function every frame.
+engine.tick = function(game){
+	for (entity of game.scene){
+		engine.renderSystem(game, entity);
+	}
+}
 //
 // Initialize a texture and load an image.
 // When the image finished loading copy it into the texture.
