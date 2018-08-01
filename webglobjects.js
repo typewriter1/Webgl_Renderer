@@ -95,6 +95,9 @@ function Renderer(entity){
 	
 		var lightDir = this.gl.getUniformLocation(shaderProgram, "uReverseLightDirection");
 		this.gl.uniform3fv(lightDir, [0.5, 0.7, 1]);
+		
+		var lightColor = this.gl.getUniformLocation(shaderProgram, "uLightColor");
+		this.gl.uniform4fv(lightColor, [0.9, 0.2, 0.2, 1]);
 	}
 	this.setTexture = function(tex){
 		this.uSamplerUniform = this.gl.getUniformLocation(this.shaderProgram, "uSampler");
