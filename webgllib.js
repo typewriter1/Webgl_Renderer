@@ -1,7 +1,14 @@
-function getWebglContext(id) {
+var engine = {};
+engine.Game = Game;
+
+loader = {};
+loader.texture = loadTexture;
+loader.model = loadModel;
+engine.loader = loader;
+var gl;
+engine.setWebglContext = function(id) {
 	var canvas = document.querySelector(id);
-	var gl = canvas.getContext("webgl");
-	
+	gl = canvas.getContext("webgl");
 	if (!gl) {
 		alert("Unable to initialize WebGl. Your browser may not support it");
 		return;
@@ -9,12 +16,11 @@ function getWebglContext(id) {
 	
 	gl.clearColor(0.6, 0.0, 0.0, 1.0);
 	gl.clear(gl.COLOR_BUFFER_BIT);
-	return gl;
 }
 
 
 
-function initShaders(gl, vert, frag) {
+engine.compileShader = function(vert, frag) {
 	const vertexShader = loadShader(gl, gl.VERTEX_SHADER, vert);
 	const fragmentShader = loadShader(gl, gl.FRAGMENT_SHADER, frag);
 	
@@ -148,12 +154,33 @@ function initBuffers(gl) {
 	};
 }
 
+function transformSystem(matrix, model){
+	var transform = model.transform;
+	//Used to move entities' matrices to their transform component.
+	mat4.translate(matrix,    										  // destination matrix
+			matrix,     											  // matrix to translate
+			[transform.pos[0], transform.pos[1], transform.pos[2]]);  // amount to translate
+						 
+	mat4.rotate(matrix,  // destination matrix
+			matrix,  // matrix to rotate
+			transform.rot[0] * Math.PI / 180,   // amount to rotate in radians
+			[1, 0, 0]);       // axis to rotate around
+					
+	mat4.rotate(matrix,  // destination matrix
+				matrix,  // matrix to rotate
+				transform.rot[1] * Math.PI / 180,   // amount to rotate in radians
+				[0, 1, 0]);       // axis to rotate around
+					
+	mat4.rotate(matrix,  // destination matrix
+				matrix,  // matrix to rotate
+				transform.rot[1] * Math.PI / 180,   // amount to rotate in radians
+				[0, 0, 1]);       // axis to rotate around
+}
 
 
-var squareRotation = 0.0;
-function drawScene(gl, model, camera) {//programInfo, buffers, deltaTime, camera) {
+engine.renderFrame = function(models, camera) {
  
-	gl.clearColor(0.3, 0.6, 0.8, 1.0);  // Clear to black, fully opaque
+	gl.clearColor(0.3, 0.6, 0.8, 1.0);  // Clear to blue, fully opaque
 	gl.clearDepth(1.0);                 // Clear everything
 	gl.enable(gl.DEPTH_TEST);           // Enable depth testing
 	gl.depthFunc(gl.LEQUAL);            // Near things obscure far things
@@ -162,7 +189,7 @@ function drawScene(gl, model, camera) {//programInfo, buffers, deltaTime, camera
 
 	gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 	
-	mesh = model.mesh
+	
 
 	// Create a perspective matrix, a special matrix that is
 	// used to simulate the distortion of perspective in a camera.
@@ -175,8 +202,9 @@ function drawScene(gl, model, camera) {//programInfo, buffers, deltaTime, camera
     const aspect = gl.canvas.clientWidth / gl.canvas.clientHeight;
 	const zNear = camera.near; //0.1;
 	const zFar = camera.far; //100.0;
-	const projectionMatrix = mat4.create();
+	
 
+	var projectionMatrix = mat4.create();
 	// note: glmatrix.js always has the first argument
 	// as the destination to receive the result.
 	mat4.perspective(projectionMatrix,
@@ -187,116 +215,107 @@ function drawScene(gl, model, camera) {//programInfo, buffers, deltaTime, camera
 
 	// Set the drawing position to the "identity" point, which is
 	// the center of the scene.
-	const modelViewMatrix = mat4.create();
-
-	// Now move the drawing position a bit to where we want to
-	// start drawing the square.
-
-	mat4.translate(modelViewMatrix,     // destination matrix
-					 modelViewMatrix,     // matrix to translate
-					 [model.transform.pos[0], model.transform.pos[1], model.transform.pos[2]]);  // amount to translate
-					 
-	mat4.rotate(modelViewMatrix,  // destination matrix
-                modelViewMatrix,  // matrix to rotate
-                model.transform.rot[0] * Math.PI / 180,   // amount to rotate in radians
-				[1, 0, 0]);       // axis to rotate around
-				
-	mat4.rotate(modelViewMatrix,  // destination matrix
-                modelViewMatrix,  // matrix to rotate
-                model.transform.rot[1] * Math.PI / 180,   // amount to rotate in radians
-				[0, 1, 0]);       // axis to rotate around
-				
-	mat4.rotate(modelViewMatrix,  // destination matrix
-                modelViewMatrix,  // matrix to rotate
-                model.transform.rot[1] * Math.PI / 180,   // amount to rotate in radians
-				[0, 0, 1]);       // axis to rotate around
-	OBJ.initMeshBuffers(gl, mesh);
-	// Tell WebGL how to pull out the positions from the position
-	// buffer into the vertexPosition attribute.
-	{
-		const numComponents = mesh.vertexBuffer.itemSize;
-		const type = gl.FLOAT;
-		const normalize = false;
-		const stride = 0;
-		const offset = 0;
-		gl.bindBuffer(gl.ARRAY_BUFFER, mesh.vertexBuffer);
-		gl.vertexAttribPointer(
-			model.shaderProgram.vertexPositionAttribute,
-			numComponents,
-			type,
-			normalize,
-			stride,
-			offset);
-		gl.enableVertexAttribArray(
-			model.shaderProgram.vertexPositionAttribute);
-	}
-
-	// Tell WebGL how to pull out the positions from the normal
-	// buffer into the vertexPosition attribute.
-	{
-		const numComponents = mesh.normalBuffer.itemSize;
-		const type = gl.FLOAT;
-		const normalize = false;
-		const stride = 0;
-		const offset = 0;
-		gl.bindBuffer(gl.ARRAY_BUFFER, mesh.normalBuffer);
-		gl.vertexAttribPointer(
-			model.shaderProgram.vertexNormalAttribute,
-			numComponents,
-			type,
-			normalize,
-			stride,
-			offset);
-		gl.enableVertexAttribArray(
-			model.shaderProgram.vertexNormalAttribute);
-	}
 	
 	
-	//Don't setup texture buffer if there isn't a texture.
-	if(!mesh.textures.length){
-		gl.disableVertexAttribArray(model.shaderProgram.textureCoordAttribute);
-	}
-	else{
-		// if the texture vertexAttribArray has been previously
-		// disabled, then it needs to be re-enabled
-		gl.enableVertexAttribArray(model.shaderProgram.textureCoordAttribute);
-		gl.bindBuffer(gl.ARRAY_BUFFER, mesh.textureBuffer);
-		gl.vertexAttribPointer(model.shaderProgram.textureCoordAttribute, mesh.textureBuffer.itemSize, gl.FLOAT, false, 0, 0);
-	}
-	
-	
+	for (model of models){
+		var mesh = model.components["renderer"].mesh;
+		var shaderProgram = model.components["renderer"].shaderProgram;
+		
+		var modelViewMatrix = mat4.create();
+		// Now move the drawing position a bit to where we want to
+		// start drawing the square.
+		
+		//All entities have transform components, so invoke the transform system.
+		transformSystem(modelViewMatrix, model);
 
-	// Tell WebGL to use our program when drawing
+		OBJ.initMeshBuffers(gl, mesh);
+		// Tell WebGL how to pull out the positions from the position
+		// buffer into the vertexPosition attribute.
+		{
+			const numComponents = mesh.vertexBuffer.itemSize;
+			const type = gl.FLOAT;
+			const normalize = false;
+			const stride = 0;
+			const offset = 0;
+			gl.bindBuffer(gl.ARRAY_BUFFER, mesh.vertexBuffer);
+			gl.vertexAttribPointer(
+				shaderProgram.vertexPositionAttribute,
+				numComponents,
+				type,
+				normalize,
+				stride,
+				offset);
+			gl.enableVertexAttribArray(
+				shaderProgram.vertexPositionAttribute);
+		}
 
-	gl.useProgram(model.shaderProgram);
+		// Tell WebGL how to pull out the positions from the normal
+		// buffer into the vertexPosition attribute.
+		{
+			const numComponents = mesh.normalBuffer.itemSize;
+			const type = gl.FLOAT;
+			const normalize = false;
+			const stride = 0;
+			const offset = 0;
+			gl.bindBuffer(gl.ARRAY_BUFFER, mesh.normalBuffer);
+			gl.vertexAttribPointer(
+				shaderProgram.vertexNormalAttribute,
+				numComponents,
+				type,
+				normalize,
+				stride,
+				offset);
+			gl.enableVertexAttribArray(
+				shaderProgram.vertexNormalAttribute);
+		}
+		
+		
+		//Don't setup texture buffer if there isn't a texture.
+		if(!mesh.textures.length){
+			gl.disableVertexAttribArray(model.shaderProgram.textureCoordAttribute);
+		}
+		else{
+			// if the texture vertexAttribArray has been previously
+			// disabled, then it needs to be re-enabled
+			gl.enableVertexAttribArray(shaderProgram.textureCoordAttribute);
+			gl.bindBuffer(gl.ARRAY_BUFFER, mesh.textureBuffer);
+			gl.vertexAttribPointer(shaderProgram.textureCoordAttribute, mesh.textureBuffer.itemSize, gl.FLOAT, false, 0, 0);
+		}
+		
+		
 
-	// Set the shader uniforms
+		// Tell WebGL to use our program when drawing
 
-	gl.uniformMatrix4fv(
-		gl.getUniformLocation(model.shaderProgram, "uProjectionMatrix"),
-		false,
-		projectionMatrix);
-	gl.uniformMatrix4fv(
-		gl.getUniformLocation(model.shaderProgram, "uModelViewMatrix"),
-		false,
-		modelViewMatrix);
-		  
-	// Tell WebGL we want to affect texture unit 0
-    gl.activeTexture(gl.TEXTURE0);
+		gl.useProgram(shaderProgram);
 
-    // Bind the texture to texture unit 0
-    gl.bindTexture(gl.TEXTURE_2D, model.texture);
+		// Set the shader uniforms
 
-    // Tell the shader we bound the texture to texture unit 0
-    gl.uniform1i(model.uSamplerUniform, 0);
+		gl.uniformMatrix4fv(
+			gl.getUniformLocation(shaderProgram, "uProjectionMatrix"),
+			false,
+			projectionMatrix);
+		gl.uniformMatrix4fv(
+			gl.getUniformLocation(shaderProgram, "uModelViewMatrix"),
+			false,
+			modelViewMatrix);
+			  
+		// Tell WebGL we want to affect texture unit 0
+		gl.activeTexture(gl.TEXTURE0);
+
+		// Bind the texture to texture unit 0
+		gl.bindTexture(gl.TEXTURE_2D, model.components["renderer"].texture);
+
+		// Tell the shader we bound the texture to texture unit 0
+		gl.uniform1i(model.components["renderer"].uSamplerUniform, 0);
 
 
 
-	{
-		const offset = 0;
-		const vertexCount = 36;
-		const type = gl.UNSIGNED_SHORT;
-		gl.drawElements(gl.TRIANGLES, mesh.indexBuffer.numItems, type, offset);
+		{
+			const offset = 0;
+			const vertexCount = 36;
+			const type = gl.UNSIGNED_SHORT;
+			gl.drawElements(gl.TRIANGLES, mesh.indexBuffer.numItems, type, offset);
+		}
 	}
 }
 
@@ -304,7 +323,7 @@ function drawScene(gl, model, camera) {//programInfo, buffers, deltaTime, camera
 // Initialize a texture and load an image.
 // When the image finished loading copy it into the texture.
 //
-function loadTexture(gl, url) {
+function loadTexture(url) {
 	const texture = gl.createTexture();
 	gl.bindTexture(gl.TEXTURE_2D, texture);
 
@@ -348,6 +367,11 @@ function loadTexture(gl, url) {
 	image.src = url;
 
 	return texture;
+}
+
+function loadModel(modelSource){
+	model = new OBJ.Mesh(modelSource);
+	return model;
 }
 
 function isPowerOf2(value) {
