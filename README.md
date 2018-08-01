@@ -18,53 +18,78 @@ Where program.js is the script you write.
 
 Example program:
 
-    //Vertex shader
-    const const vertexShader = `
-    attribute vec4 aVertexPosition;
-    attribute vec3 aVertexNormal;
-    attribute vec2 aTextureCoord;
+    const vertexShader = `
+attribute vec4 aVertexPosition;
+attribute vec3 aVertexNormal;
+attribute vec2 aTextureCoord;
 
-    uniform mat4 uModelViewMatrix;
-    uniform mat4 uProjectionMatrix;
+uniform mat4 uModelViewMatrix;
+uniform mat4 uProjectionMatrix;
 
-    varying highp vec3 normal;
-    varying highp vec2 tex_coord;
-    void main() {
-      gl_Position = uProjectionMatrix * uModelViewMatrix * aVertexPosition;
-      normal = aVertexNormal;
-      tex_coord = aTextureCoord;
-    }
-    `;
+varying highp vec3 normal;
+varying highp vec2 tex_coord;
+void main() {
+	gl_Position = uProjectionMatrix * uModelViewMatrix * aVertexPosition;
+	normal = mat3(uModelViewMatrix) * aVertexNormal;
+	tex_coord = aTextureCoord;
+}
+`;
 
-    //fragment shader
-    const fragmentShader = `
-    varying highp vec3 normal;
-    varying highp vec2 tex_coord;
-    void main () {
-      gl_FragColor = vec4(1.0, 0.3, 0.3);
-    }
-    `;
+const fragmentShader = `
+varying highp vec3 normal;
+varying highp vec2 tex_coord;
 
-    const gl = getWebglContext("#canvas");  //Ensure you have a cavas with id value of 'canvas'
-    const shaderProgram = initShaders(gl, vertexShader, fragmentShader);  //compile the shaders
+uniform sampler2D uSampler;
+uniform highp vec3 uReverseLightDirection;
 
-    var camera = new Camera(70, 0.01, 100);  //fov, near, far
+void main () {
+	// because v_normal is a varying it's interpolated
+   // we it will not be a uint vector. Normalizing it
+   // will make it a unit vector again
+   highp vec3 normal = normalize(normal);
+ 
+    highp float light = dot(normal, uReverseLightDirection);
+	gl_FragColor = texture2D(uSampler, tex_coord);
+	gl_FragColor.rgb *= light;
+}
+`;
 
-    const model = new Model(gl, "model.obj", shaderProgram);
-    model.transform.pos[2] = -10;  //move it back on z axis so it is visible on camera
-    model.transform.rot = [180, 23, 290];  //x, y, z in degrees
+engine.setWebglContext("#canvas");
+var game = new engine.Game(gl);
+const shaderProgram = engine.compileShader(vertexShader, fragmentShader);
 
-    var then = 0;
+var camera = new Camera(game);
+camera.setup(70, 0.01, 100);
+camera.transform.pos[0] = 9;
 
-    // Draw the scene repeatedly
-    function render(now) {
-      now *= 0.001;  // convert to seconds
-      const deltaTime = now - then;
-      then = now;
+var mod = new Entity(game);
+game.scene.push(mod);
+var tex = engine.loader.texture("models/odd-tree2.png");
+var renderer = new Renderer(mod);
+renderer.setModel(engine.loader.model(OBJ_SRC));
+renderer.setShader(shaderProgram);
+renderer.setTexture(tex);
+mod.transform.pos = [0, -4, -8];
 
-      drawScene(gl, model, camera);  //Currently only supports one model
 
-      requestAnimationFrame(render);
-      model.transform.rot[1] += 22 * deltaTime;  //Rotate the cube
-    }
-    requestAnimationFrame(render);
+var then = 0;
+
+// Draw the scene repeatedly
+function render(now) {
+	now *= 0.001;  // convert to seconds
+	var deltaTime = now - then;
+	if (deltaTime > 0.02){
+		deltaTime = 0.02
+	}
+	then = now;
+
+	engine.tick(game);
+
+	requestAnimationFrame(render);
+	
+	fps = 1 / deltaTime;
+	document.getElementById("fps").innerHTML = "FPS:  " + fps;
+	mod.transform.pos[1] += 1 * deltaTime;
+}
+requestAnimationFrame(render);
+
