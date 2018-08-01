@@ -19,67 +19,67 @@ Where program.js is the script you write.
 Example program:
 
     const vertexShader = `
-attribute vec4 aVertexPosition;
-attribute vec3 aVertexNormal;
-attribute vec2 aTextureCoord;
-
-uniform mat4 uModelViewMatrix;
-uniform mat4 uProjectionMatrix;
-
-varying highp vec3 normal;
-varying highp vec2 tex_coord;
-void main() {
+    attribute vec4 aVertexPosition;
+    attribute vec3 aVertexNormal;
+    attribute vec2 aTextureCoord;
+    
+    uniform mat4 uModelViewMatrix;
+    uniform mat4 uProjectionMatrix;
+    
+    varying highp vec3 normal;
+    varying highp vec2 tex_coord;
+    void main() {
 	gl_Position = uProjectionMatrix * uModelViewMatrix * aVertexPosition;
 	normal = mat3(uModelViewMatrix) * aVertexNormal;
 	tex_coord = aTextureCoord;
-}
-`;
+    }
+    `;
 
-const fragmentShader = `
-varying highp vec3 normal;
-varying highp vec2 tex_coord;
+    const fragmentShader = `
+    varying highp vec3 normal;
+    varying highp vec2 tex_coord;
 
-uniform sampler2D uSampler;
-uniform highp vec3 uReverseLightDirection;
-
-void main () {
-	// because v_normal is a varying it's interpolated
-   // we it will not be a uint vector. Normalizing it
-   // will make it a unit vector again
-   highp vec3 normal = normalize(normal);
+    uniform sampler2D uSampler;
+    uniform highp vec3 uReverseLightDirection;
+    
+    void main () {
+    	// because v_normal is a varying it's interpolated
+        // we it will not be a uint vector. Normalizing it
+        // will make it a unit vector again
+        highp vec3 normal = normalize(normal);
  
-    highp float light = dot(normal, uReverseLightDirection);
+        highp float light = dot(normal, uReverseLightDirection);
 	gl_FragColor = texture2D(uSampler, tex_coord);
 	gl_FragColor.rgb *= light;
-}
-`;
+    }
+    `;
 
-engine.setWebglContext("#canvas");
-var game = new engine.Game(gl);
-const shaderProgram = engine.compileShader(vertexShader, fragmentShader);
+    engine.setWebglContext("#canvas");
+    var game = new engine.Game(gl);
+    const shaderProgram = engine.compileShader(vertexShader, fragmentShader);
 
-var camera = new Camera(game);
-camera.setup(70, 0.01, 100);
-camera.transform.pos[0] = 9;
+    var camera = new Camera(game);
+    camera.setup(70, 0.01, 100);
+    camera.transform.pos[0] = 9;
 
-var mod = new Entity(game);
-game.scene.push(mod);
-var tex = engine.loader.texture("models/odd-tree2.png");
-var renderer = new Renderer(mod);
-renderer.setModel(engine.loader.model(OBJ_SRC));
-renderer.setShader(shaderProgram);
-renderer.setTexture(tex);
-mod.transform.pos = [0, -4, -8];
+    var mod = new Entity(game);
+    game.scene.push(mod);
+    var tex = engine.loader.texture("models/odd-tree2.png");
+    var renderer = new Renderer(mod);
+    renderer.setModel(engine.loader.model(OBJ_SRC));
+    renderer.setShader(shaderProgram);
+    renderer.setTexture(tex);
+    mod.transform.pos = [0, -4, -8];
 
 
-var then = 0;
+    var then = 0;
 
-// Draw the scene repeatedly
-function render(now) {
+    // Draw the scene repeatedly
+    function render(now) {
 	now *= 0.001;  // convert to seconds
 	var deltaTime = now - then;
 	if (deltaTime > 0.02){
-		deltaTime = 0.02
+	    deltaTime = 0.02
 	}
 	then = now;
 
@@ -90,6 +90,6 @@ function render(now) {
 	fps = 1 / deltaTime;
 	document.getElementById("fps").innerHTML = "FPS:  " + fps;
 	mod.transform.pos[1] += 1 * deltaTime;
-}
-requestAnimationFrame(render);
+    }
+    requestAnimationFrame(render);
 
