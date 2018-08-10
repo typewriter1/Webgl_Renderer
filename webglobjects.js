@@ -62,6 +62,7 @@ function Entity(gameObject){
 	this.gl = gameObject.gl;
 	this.transform = new Transform();
 	this.components = {};
+	this.parentEntity = null;
 	
 	this.addComponent = function(name, component){
 		this.components[name] = component;
@@ -72,6 +73,7 @@ function Transform(){
 	this.pos = [0, 0, 0];
 	this.rot = [0, 0, 0];
 	this.scale = [0, 0, 0];
+	this.modelViewMatrix = mat4.create();
 }
 
 function Renderer(entity){
@@ -94,10 +96,10 @@ function Renderer(entity){
 		this.shaderProgram.textureCoordAttribute = this.gl.getAttribLocation(shaderProgram, "aTextureCoord");
 	
 		var lightDir = this.gl.getUniformLocation(shaderProgram, "uReverseLightDirection");
-		this.gl.uniform3fv(lightDir, [0.5, 0.7, 1]);
+		this.gl.uniform3fv(lightDir, [1, 1, 1]);
 		
 		var lightColor = this.gl.getUniformLocation(shaderProgram, "uLightColor");
-		this.gl.uniform4fv(lightColor, [0.9, 0.2, 0.2, 1]);
+		this.gl.uniform4fv(lightColor, [0.8, 0.8, 0.8, 1]);
 	}
 	this.setTexture = function(tex){
 		this.uSamplerUniform = this.gl.getUniformLocation(this.shaderProgram, "uSampler");

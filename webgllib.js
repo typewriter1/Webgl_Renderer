@@ -1,13 +1,21 @@
+//javascript 'namespace' for the engine
 var engine = {};
 engine.Game = Game;
 
+//loader object
 loader = {};
 loader.texture = loadTexture;
 loader.model = loadModel;
 engine.loader = loader;
+
+//Stores the gl context
 var gl;
+
 engine.setWebglContext = function(id) {
+	//Accepts the id of a canvas element and sets up a WebGL context for 
+	//it, using the gl global variable
 	var canvas = document.querySelector(id);
+	engine.canvasID = id;
 	gl = canvas.getContext("webgl");
 	if (!gl) {
 		alert("Unable to initialize WebGl. Your browser may not support it");
@@ -155,7 +163,10 @@ function initBuffers(gl) {
 }
 
 function transformSystem(matrix, model){
+	//Transforms the matrix to the entity (model) 's transform.
+	//Called every frame from engine.tick for all entities.
 	var transform = model.transform;
+	
 	//Used to move entities' matrices to their transform component.
 	mat4.translate(matrix,    										  // destination matrix
 			matrix,     											  // matrix to translate
@@ -177,9 +188,7 @@ function transformSystem(matrix, model){
 				[0, 0, 1]);       // axis to rotate around
 }
 
-
-engine.renderSystem = function(gameObject, model) {
- 
+engine.clearScreen = function(){
 	gl.clearColor(0.3, 0.6, 0.8, 1.0);  // Clear to blue, fully opaque
 	gl.clearDepth(1.0);                 // Clear everything
 	gl.enable(gl.DEPTH_TEST);           // Enable depth testing
@@ -188,7 +197,11 @@ engine.renderSystem = function(gameObject, model) {
 	// Clear the canvas before we start drawing on it.
 
 	gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+}
 	
+engine.renderSystem = function(gameObject, entity) {
+	//Renders a model - called for every entity from engine.tick
+ 	
 	if (gameObject.camera === null){
 		throw "No main camera has been set.";
 	}
@@ -209,7 +222,7 @@ engine.renderSystem = function(gameObject, model) {
 	const zFar = camera.far; //100.0;
 	
 
-	var projectionMatrix = mat4.create();
+	projectionMatrix = mat4.create();
 	// note: glmatrix.js always has the first argument
 	// as the destination to receive the result.
 	mat4.perspective(projectionMatrix,
@@ -224,15 +237,13 @@ engine.renderSystem = function(gameObject, model) {
 	// the center of the scene.
 
 
-	var mesh = model.components["renderer"].mesh;
-	var shaderProgram = model.components["renderer"].shaderProgram;
+	var mesh = entity.components["renderer"].mesh;
+	var shaderProgram = entity.components["renderer"].shaderProgram;
 	
-	var modelViewMatrix = mat4.create();
+	entity.transform.modelViewMatrix = mat4.create();
 	// Now move the drawing position a bit to where we want to
 	// start drawing the square.
 	
-	//All entities have transform components, so invoke the transform system.
-	transformSystem(modelViewMatrix, model);
 
 	OBJ.initMeshBuffers(gl, mesh);
 	// Tell WebGL how to pull out the positions from the position
@@ -278,7 +289,7 @@ engine.renderSystem = function(gameObject, model) {
 	
 	//Don't setup texture buffer if there isn't a texture.
 	if(!mesh.textures.length){
-		gl.disableVertexAttribArray(model.shaderProgram.textureCoordAttribute);
+		gl.disableVertexAttribArray(shaderProgram.textureCoordAttribute);
 	}
 	else{
 		// if the texture vertexAttribArray has been previously
@@ -303,16 +314,17 @@ engine.renderSystem = function(gameObject, model) {
 	gl.uniformMatrix4fv(
 		gl.getUniformLocation(shaderProgram, "uModelViewMatrix"),
 		false,
-		modelViewMatrix);
+		entity.transform.modelViewMatrix);
 		  
 	// Tell WebGL we want to affect texture unit 0
 	gl.activeTexture(gl.TEXTURE0);
 
 	// Bind the texture to texture unit 0
-	gl.bindTexture(gl.TEXTURE_2D, model.components["renderer"].texture);
+	gl.bindTexture(gl.TEXTURE_2D, entity.components["renderer"].texture);
 
 	// Tell the shader we bound the texture to texture unit 0
-	gl.uniform1i(model.components["renderer"].uSamplerUniform, 0);
+	gl.uniform1i(entity.components["renderer"].uSamplerUniform, 0);
+	gl.uniform1i(entity.components["renderer"].uSamplerUniform, 0);
 
 
 
@@ -326,8 +338,12 @@ engine.renderSystem = function(gameObject, model) {
 
 //Programs should call this function every frame.
 engine.tick = function(game){
+	engine.clearScreen();
 	for (entity of game.scene){
 		engine.renderSystem(game, entity);
+		
+	//All entities have transform components, so invoke the transform system.
+	transformSystem(entity.transform.modelViewMatrix, entity);
 	}
 }
 //
@@ -387,4 +403,14 @@ function loadModel(modelSource){
 
 function isPowerOf2(value) {
 	return (value & (value - 1)) == 0;
+}
+
+engine.requestFullscreen = function(){
+	c = document.querySelector(engine.canvasID);
+	try {
+		c.webkitRequestFullscreen();
+	}
+	catch(error){
+		c.requestFullscreen();
+	}
 }
