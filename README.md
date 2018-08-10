@@ -13,7 +13,10 @@ Include this somewhere in your page:
 
     <script src="path-to-gl-matrix/dist/gl-matrix-min.js"></script>
     <script src="path-to-webgl-obj-loader/dist/webgl-obj-loader.min.js"></script>
+    <script src="webglobjects.js"></script>
+    <script src="webgllib.js"></script>
     <script src="program.js"></script>
+    
 Where program.js is the script you write.
 
 For samples, see samples directory.
