@@ -19,4 +19,6 @@ Include this somewhere in your page:
     
 Where program.js is the script you write.
 
+For a basic tutorial, see wiki.
+
 For samples, see samples directory.
