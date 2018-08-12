@@ -108,6 +108,11 @@ function Renderer(entity){
 }
 function Camera(gameObject){
 	Entity.call(this, gameObject);
+	
+	this.fov = 70;
+	this.near = 0.01;
+	this.far = 1000;
+		
 	gameObject.setMainCamera(this);
 	this.setup = function(fov, near, far){
 		this.fov = fov;

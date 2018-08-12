@@ -2,6 +2,46 @@
 var engine = {};
 engine.Game = Game;
 
+engine.defaultVertexShader = `
+attribute vec4 aVertexPosition;
+attribute vec3 aVertexNormal;
+attribute vec2 aTextureCoord;
+
+uniform mat4 uModelViewMatrix;
+uniform mat4 uProjectionMatrix;
+
+varying highp vec3 normal;
+varying highp vec2 tex_coord;
+void main() {
+	gl_Position = uProjectionMatrix * uModelViewMatrix * aVertexPosition;
+	normal = mat3(uModelViewMatrix) * aVertexNormal;
+	tex_coord = aTextureCoord;
+}
+`;
+
+engine.defaultFragmentShader = `
+varying highp vec3 normal;
+varying highp vec2 tex_coord;
+
+uniform sampler2D uSampler;
+
+uniform highp vec3 uReverseLightDirection;
+uniform highp vec4 uLightColor;
+
+void main () {
+	// because v_normal is a varying it's interpolated
+   // we it will not be a uint vector. Normalizing it
+   // will make it a unit vector again
+   highp vec3 normal = normalize(normal);
+ 
+    highp float directional = max(dot(normal, uReverseLightDirection), 0.0);
+	highp vec4 ambientColor = vec4(0.4, 0.4, 0.4, 1.0);
+	highp vec3 light = ambientColor.xyz + (uLightColor.rgb * directional);
+	highp vec4 color = texture2D(uSampler, tex_coord);
+	gl_FragColor = vec4(color.rgb * light, color.a);
+}
+`;
+
 //loader object
 loader = {};
 loader.texture = loadTexture;
