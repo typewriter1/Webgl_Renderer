@@ -12,13 +12,13 @@ engine.loader = loader;
 var gl;
 
 engine.setWebglContext = function(id) {
-	//Accepts the id of a canvas element and sets up a WebGL context for 
+	//Accepts the selector of a canvas element and sets up a WebGL context for 
 	//it, using the gl global variable
 	var canvas = document.querySelector(id);
 	engine.canvasID = id;
-	gl = canvas.getContext("webgl");
+	gl = canvas.getContext("experimental-webgl");
 	if (!gl) {
-		alert("Unable to initialize WebGl. Your browser may not support it");
+		alert("Unable to initialize WebGl. Your browser may not support it.");
 		return;
 	}
 	
@@ -186,6 +186,18 @@ function transformSystem(matrix, model){
 				matrix,  // matrix to rotate
 				transform.rot[2] * Math.PI / 180,   // amount to rotate in radians
 				[0, 0, 1]);       // axis to rotate around
+				
+	if (typeof transform.scale === "object"){
+		mat4.scale(matrix,
+					matrix,
+					transform.scale);
+	}
+	if (typeof transform.scale === "number"){
+		mat4.scale(matrix,
+					matrix,
+					[transform.scale, transform.scale, transform.scale]);
+	}
+				
 }
 
 engine.clearScreen = function(){
@@ -199,39 +211,12 @@ engine.clearScreen = function(){
 	gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 }
 	
-engine.renderSystem = function(gameObject, entity) {
+engine.renderSystem = function(gameObject, entity, projectionMatrix) {
 	//Renders a model - called for every entity from engine.tick
  	
 	if (gameObject.camera === null){
 		throw "No main camera has been set.";
 	}
-	
-	//set the camera variable to the main camera
-	var camera = gameObject.camera;
-
-	// Create a perspective matrix, a special matrix that is
-	// used to simulate the distortion of perspective in a camera.
-	// Our field of view is 45 degrees, with a width/height
-	// ratio that matches the display size of the canvas
-	// and we only want to see objects between 0.1 units
-	// and 100 units away from the camera.
-
-	const fieldOfView = camera.fov * Math.PI / 180;   // in radians
-    const aspect = gl.canvas.clientWidth / gl.canvas.clientHeight;
-	const zNear = camera.near; //0.1;
-	const zFar = camera.far; //100.0;
-	
-
-	projectionMatrix = mat4.create();
-	// note: glmatrix.js always has the first argument
-	// as the destination to receive the result.
-	mat4.perspective(projectionMatrix,
-					   fieldOfView,
-					   aspect,
-					   zNear,
-					   zFar);
-					   
-	transformSystem(projectionMatrix, camera);
 
 	// Set the drawing position to the "identity" point, which is
 	// the center of the scene.
@@ -240,12 +225,13 @@ engine.renderSystem = function(gameObject, entity) {
 	var mesh = entity.components["renderer"].mesh;
 	var shaderProgram = entity.components["renderer"].shaderProgram;
 	
-	entity.transform.modelViewMatrix = mat4.create();
+	
 	// Now move the drawing position a bit to where we want to
 	// start drawing the square.
 	
 
 	OBJ.initMeshBuffers(gl, mesh);
+	
 	// Tell WebGL how to pull out the positions from the position
 	// buffer into the vertexPosition attribute.
 	{
@@ -339,11 +325,40 @@ engine.renderSystem = function(gameObject, entity) {
 //Programs should call this function every frame.
 engine.tick = function(game){
 	engine.clearScreen();
+	
+	//set the camera variable to the main camera
+	var camera = game.camera;
+
+	// Create a perspective matrix, a special matrix that is
+	// used to simulate the distortion of perspective in a camera.
+	// Our field of view is 45 degrees, with a width/height
+	// ratio that matches the display size of the canvas
+	// and we only want to see objects between 0.1 units
+	// and 100 units away from the camera.
+
+	const fieldOfView = camera.fov * Math.PI / 180;   // in radians
+    const aspect = gl.canvas.clientWidth / gl.canvas.clientHeight;
+	const zNear = camera.near; //0.1;
+	const zFar = camera.far; //100.0;
+	
+	var projectionMatrix = mat4.create();
+	// note: glmatrix.js always has the first argument
+	// as the destination to receive the result.
+	mat4.perspective(projectionMatrix,
+					   fieldOfView,
+					   aspect,
+					   zNear,
+					   zFar);
+					   
+	transformSystem(projectionMatrix, camera);
+	
 	for (entity of game.scene){
-		engine.renderSystem(game, entity);
+		entity.transform.modelViewMatrix = mat4.create();
+		transformSystem(entity.transform.modelViewMatrix, entity);
+		engine.renderSystem(game, entity, projectionMatrix);
 		
-	//All entities have transform components, so invoke the transform system.
-	transformSystem(entity.transform.modelViewMatrix, entity);
+		//All entities have transform components, so invoke the transform system.
+		
 	}
 }
 //

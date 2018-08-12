@@ -72,7 +72,7 @@ function Entity(gameObject){
 function Transform(){
 	this.pos = [0, 0, 0];
 	this.rot = [0, 0, 0];
-	this.scale = [0, 0, 0];
+	this.scale = 1;
 	this.modelViewMatrix = mat4.create();
 }
 
